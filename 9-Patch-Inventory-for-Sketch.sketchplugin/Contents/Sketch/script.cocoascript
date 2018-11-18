@@ -28,7 +28,7 @@ scaleNameArray.addObject("xxhdpi")
 scaleNameArray.addObject("xxxhdpi")
 
 var mdpiString = scaleNameArray.firstObject()
-var patchGap = 40 + 2
+var patchGap = 40
 
 
 
@@ -263,11 +263,18 @@ var generatePatchPositionArray = function(scaleFactorArray, pmPosition) {
       var prevPatchPosition = patchPositionArray.objectAtIndex(i - 1)
     
       var currentPatchSize = {
-          width: Math.floor(pmPosition.noPatchWidth * currentScaleFactor),
-          height: Math.floor(pmPosition.noPatchHeight * currentScaleFactor),
-          x: Math.floor(prevPatchPosition.x + prevPatchPosition.width + patchGap),
-          y: Math.floor(prevPatchPosition.y)
+          width: Math.floor(pmPosition.noPatchWidth * currentScaleFactor) + 2,
+          height: Math.floor(pmPosition.noPatchHeight * currentScaleFactor) + 2,
+		  noPatchWidth: Math.floor(pmPosition.noPatchWidth * currentScaleFactor),
+		  noPatchHeight: Math.floor(pmPosition.noPatchHeight * currentScaleFactor),
+          x: prevPatchPosition.x + prevPatchPosition.width + patchGap,
+          y: prevPatchPosition.y
       }
+	  
+	log("Current " + i)
+	log(prevPatchPosition)
+	log(currentPatchSize)
+	 log("\n")
   
       patchPositionArray.addObject(currentPatchSize)
     }
@@ -388,18 +395,6 @@ var applyScale = function(localScaleType, currentPMLayer, currentPatchArtboard, 
   }
   
 }
-
-// var applyHorizontalScale = function(layer, scaleFactor) {
-//   var frame = [layer frame]
-//   [frame setX: [[frame x] * scaleFactor]]
-//   [frame setWidth: [[frame width] * scaleFactor]]
-// }
-// 
-// var applyVerticalScale = function(layer, scaleFactor) {
-//   var frame = [layer frame]
-//   [frame setY: [[frame y] * scaleFactor]]
-//   [frame setHeight: [[frame height] * scaleFactor]]
-// }
 
 
 
