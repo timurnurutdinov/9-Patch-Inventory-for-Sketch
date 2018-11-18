@@ -1,0 +1,505 @@
+@import 'type-inventory.cocoascript'
+
+
+var currentDocument = nil
+var page = nil
+
+var scaleType = {
+    top: 0,
+    bottom: 1,
+    left: 2,
+    right: 3
+}
+
+
+var scaleFactorArray = NSMutableArray.new()
+scaleFactorArray.addObject(1)
+scaleFactorArray.addObject(1.5)
+scaleFactorArray.addObject(2)
+scaleFactorArray.addObject(3)
+scaleFactorArray.addObject(4)
+
+
+var scaleNameArray = NSMutableArray.new()
+scaleNameArray.addObject("mdpi")
+scaleNameArray.addObject("hdpi")
+scaleNameArray.addObject("xhdpi")
+scaleNameArray.addObject("xxhdpi")
+scaleNameArray.addObject("xxxhdpi")
+
+var mdpiString = scaleNameArray.firstObject()
+var patchGap = 40 + 2
+
+
+
+var onRun = function(context) {
+
+	currentDocument = context.document
+	page = [currentDocument currentPage]
+	
+	var pageLayers = [page layers]
+	var selectedLayers = currentDocument.selectedLayers().layers();
+	
+	var patchMaster = selectedLayers.firstObject()
+	if (patchMaster == null) {
+	  [currentDocument showMessage:"Select Artboard or Master Symbol"]
+	  log("Select Artboard or Master Symbol")
+	  return
+	}
+	if (!(patchMaster.className() == "MSArtboardGroup" || patchMaster.className() == "MSSymbolMaster")) {
+	  [currentDocument showMessage:"Select Artboard or Master Symbol"]
+	  log("Select Artboard or Master Symbol")
+	  return
+	}
+	
+	
+	
+	var pmPosition = getPlace(patchMaster)
+
+	var pmPatchLayers = collectPatchLayers(patchMaster, pmPosition)
+	removePatchLayers(pmPatchLayers)
+
+	var positionArray = generatePatchPositionArray(scaleFactorArray, pmPosition)
+	var patchArtboards = createPatchArtboards(patchMaster, positionArray, pmPatchLayers)
+
+	createPatchLayers(pmPatchLayers, patchArtboards)
+
+
+
+  	// var learnFileDoneMessage = "Done " + leaningVectorFileLines + " lines"
+  	[currentDocument showMessage:"👍🏻"]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var normaliseLayer = function(layer) {
+	var currentPage = currentDocument.currentPage()
+
+    var existingRotation = [layer rotation]
+    [layer setRotation: 0]
+
+    var layer_copy = [layer duplicate]
+	[layer_copy removeFromParent]
+	[currentPage addLayers: [layer_copy]]
+
+	var frame = [layer_copy frame]
+	[frame setX: [[layer absoluteRect] x]]
+	[frame setY: [[layer absoluteRect] y]]
+
+	[layer_copy setRotation: 0]
+	[[[layer_copy style] contextSettings] setOpacity:(1.0)]
+	[layer_copy setIsVisible:true]
+
+    [layer setRotation: existingRotation]
+	return layer_copy
+}
+
+
+var getAbsolutePlaceImage = function(layer) {
+	if (layer == nil) { return [100, 100, 0, 0] }
+	var normalisedLayer = normaliseLayer(layer)
+	var temp = MSSliceTrimming.trimmedRectForLayerAncestry(MSImmutableLayerAncestry.ancestryWithMSLayer(normalisedLayer))
+	var values = [temp.size.width, temp.size.height, temp.origin.x, temp.origin.y]
+
+	[normalisedLayer removeFromParent]
+	return values
+}
+
+
+var getAbsolutePlaceRect = function(layer) {
+	if (layer == nil) { return nil }
+	if (TypeInventory.isPageType([layer className])) { return [0,0,0,0] }
+
+	var normalisedRect = normaliseLayer(layer)
+	var values = [[[normalisedRect frame] width], [[normalisedRect frame] height], [[normalisedRect absoluteRect] x], [[normalisedRect absoluteRect] y]]
+
+	[normalisedRect removeFromParent]
+	return values
+}
+
+
+var getAbsolutePlaceArtboard = function(artboard) {
+    if (artboard == nil) { return nil }
+    return [[[artboard frame] width], [[artboard frame] height], artboard.rulerBase().x.integerValue(), artboard.rulerBase().y.integerValue()]
+}
+
+
+
+var getPlace = function(layer) {
+	if (layer == nil) { return [100, 100, 0, 0] }
+	if (TypeInventory.isArtboardType(layer)) { return getAbsolutePlaceRect(layer) }
+
+	var currentPage = currentDocument.currentPage()
+	var parentValues = getAbsolutePlaceArtboard(TypeInventory.findParentArtboard(layer))    
+
+	var layerValues = getAbsolutePlaceRect(layer)
+	//var resultValues = [layerValues[0], layerValues[1], layerValues[2] - parentValues[2], layerValues[3] - parentValues[3]]
+    
+    var resultValues = {
+      width: layerValues[0], 
+      height: layerValues[1],
+      noPatchWidth: layerValues[0] - 2, 
+      noPatchHeight: layerValues[1] - 2, 
+      x: layerValues[2] - parentValues[2],
+      y: layerValues[3] - parentValues[3]]
+    }
+
+	return resultValues
+}
+
+
+
+
+
+
+
+
+
+
+
+var collectPatchLayers = function(currentPatch, pmPosition) {
+  
+  var currentPatchChildren = currentPatch.children()
+  var currentPatchPosition = getPlace(currentPatch)
+  
+  
+  var patchArrays = {
+    left: NSMutableArray.new(),
+    right: NSMutableArray.new(),
+    top: NSMutableArray.new(),
+    bottom: NSMutableArray.new(),
+    layers: NSMutableArray.new()
+  }
+  
+  
+  for (var i = 0; i < currentPatchChildren.count(); i++) { 
+    var cc = currentPatchChildren.objectAtIndex(i)
+    var ccPosition = getPlace(cc)
+    
+    
+    if (ccPosition.x == 0 && ccPosition.width == 1) {
+      patchArrays.left.addObject(cc)
+      patchArrays.layers.addObject(cc)
+    }
+    else if (ccPosition.x == pmPosition.width - 1 && ccPosition.width == 1) {
+      patchArrays.right.addObject(cc)
+      patchArrays.layers.addObject(cc)
+    }
+    else if (ccPosition.y == 0 && ccPosition.height == 1) {
+      patchArrays.top.addObject(cc)
+      patchArrays.layers.addObject(cc)
+    }
+    else if (ccPosition.y == pmPosition.height - 1 && ccPosition.height == 1) {
+      patchArrays.bottom.addObject(cc)
+      patchArrays.layers.addObject(cc)
+    }
+
+  }
+
+  return patchArrays
+}
+
+
+
+
+var removePatchPadding = function(patchArtboard) {
+  var topChildren = patchArtboard.layers()
+  
+  for (var i = 0; i < topChildren.count(); i++) {
+      var currentChild = topChildren.objectAtIndex(i)
+
+      var frame = [currentChild frame]
+      [frame setX: [[frame x] - 1]]
+      [frame setY: [[frame y] - 1]]
+  }
+  
+  var frame = [patchArtboard frame]
+  [frame setWidth: [[frame width] - 2]]
+  [frame setHeight: [[frame height] - 2]]
+
+}
+
+
+// removePatchPadding(patchMaster)
+
+var addPatchPadding = function(patchArtboard) {
+  var topChildren = patchArtboard.layers()
+  
+  for (var i = 0; i < topChildren.count(); i++) {
+      var currentChild = topChildren.objectAtIndex(i)
+
+      var frame = [currentChild frame]
+      [frame setX: [[frame x] + 1]]
+      [frame setY: [[frame y] + 1]]
+  }
+  
+  var frame = [patchArtboard frame]
+  [frame setWidth: [[frame width] + 2]]
+  [frame setHeight: [[frame height] + 2]]
+}
+
+// addPatchPadding(patchMaster)
+
+
+var removePatchLayers = function(pmPatchLayers) {
+  var patchLayers = pmPatchLayers.layers
+
+  for (var i = 0; i < patchLayers.count(); i++) {
+    var currentPatchLayer = patchLayers.objectAtIndex(i)
+    [currentPatchLayer removeFromParent]
+  }
+}
+
+
+// removePatchLayers(patchMaster)
+
+
+
+
+
+var generatePatchPositionArray = function(scaleFactorArray, pmPosition) {
+  var patchPositionArray = NSMutableArray.new()
+//   log(pmPosition.y)
+
+  for (var i = 0; i < scaleFactorArray.count(); i++) {
+    if (i == 0) { patchPositionArray.push(pmPosition) }
+  
+    else {
+  
+      var currentScaleFactor = scaleFactorArray.objectAtIndex(i)
+      var prevPatchPosition = patchPositionArray.objectAtIndex(i - 1)
+    
+      var currentPatchSize = {
+          width: Math.floor(pmPosition.noPatchWidth * currentScaleFactor),
+          height: Math.floor(pmPosition.noPatchHeight * currentScaleFactor),
+          x: Math.floor(prevPatchPosition.x + prevPatchPosition.width + patchGap),
+          y: Math.floor(prevPatchPosition.y)
+      }
+  
+      patchPositionArray.addObject(currentPatchSize)
+    }
+  }
+  
+
+//   log(currentPatchSize.y)
+  
+  return patchPositionArray
+
+}
+
+
+
+var createPatchArtboards = function(patchMaster, positionArray, pmPatchLayers) {
+  var patchArtboards = NSMutableArray.new()
+  var currentTitleArtboardNames = getPatchArtboardNameArray(patchMaster.name())
+  log(currentTitleArtboardNames)
+
+  for (var i = 0; i < positionArray.count(); i++) {
+    if (i == 0) {
+        patchMaster.setName(currentTitleArtboardNames.objectAtIndex(i))
+        makeExportable(patchMaster)
+        patchArtboards.addObject(patchMaster)
+        continue
+    }
+    
+    var currentPosition = positionArray.objectAtIndex(i)
+
+    var nextPatch = [patchMaster duplicate]
+    [nextPatch removeFromParent]
+    [page addLayers: [nextPatch]]
+    
+    removePatchPadding(nextPatch)
+    nextPatch.multiplyBy(scaleFactorArray.objectAtIndex(i))
+    addPatchPadding(nextPatch)
+
+    var frame = [nextPatch frame]
+    [frame setX: currentPosition.x]
+    [frame setY: currentPosition.y]
+
+//     log([frame y])
+//     log("---")
+    
+//     log("| " + currentTitleArtboardNames.objectAtIndex(i))
+    nextPatch.setName(currentTitleArtboardNames.objectAtIndex(i))
+    makeExportable(patchMaster)
+    patchArtboards.addObject(nextPatch)
+  }
+  
+  return patchArtboards
+}
+
+
+
+
+var createPatchLayers = function(pmPatchLayers, patchArtboards) {
+  log("PMLayers")
+  log(pmPatchLayers)
+  log("———")
+
+
+  for (var i = 0; i < patchArtboards.count(); i++) {
+      var scaleFactor = scaleFactorArray.objectAtIndex(i)
+      var currentPatchArtboard = patchArtboards.objectAtIndex(i)
+      
+
+      var currentArtboardTopChildren = currentPatchArtboard.layers()
+      var restoreLayerArray = NSMutableArray.new()
+      log(currentArtboardTopChildren)
+      for (var c = 0; c < currentArtboardTopChildren.count(); c++) {
+          var currentTopChild = currentArtboardTopChildren.objectAtIndex(c)
+          [currentTopChild removeFromParent]
+          restoreLayerArray.addObject(currentTopChild)
+      }
+
+      
+
+      // Making Patches
+      for (var j = 0; j < pmPatchLayers.top.count(); j++) {
+          applyScale(scaleType.top, pmPatchLayers.top.objectAtIndex(j), currentPatchArtboard, scaleFactorArray.objectAtIndex(i))
+      }
+      
+      for (var j = 0; j < pmPatchLayers.bottom.count(); j++) {
+          applyScale(scaleType.bottom, pmPatchLayers.bottom.objectAtIndex(j), currentPatchArtboard, scaleFactorArray.objectAtIndex(i))
+      }
+
+      for (var j = 0; j < pmPatchLayers.left.count(); j++) {
+          applyScale(scaleType.left, pmPatchLayers.left.objectAtIndex(j), currentPatchArtboard, scaleFactorArray.objectAtIndex(i))
+      }
+
+      for (var j = 0; j < pmPatchLayers.right.count(); j++) {
+          applyScale(scaleType.right, pmPatchLayers.right.objectAtIndex(j), currentPatchArtboard, scaleFactorArray.objectAtIndex(i))
+      }
+
+//       log(restoreLayerArray)
+      for (var c = 0; c < restoreLayerArray.count(); c++) {
+          var currentTopChild = restoreLayerArray.objectAtIndex(c)
+          [currentPatchArtboard addLayers:[currentTopChild]]
+      }
+  }
+}
+
+
+var applyScale = function(localScaleType, currentPMLayer, currentPatchArtboard, scaleFactor) {
+  var layer_copy = [currentPMLayer duplicate]
+  [layer_copy removeFromParent]
+  [currentPatchArtboard addLayers: [layer_copy]] 
+
+  var frame = [layer_copy frame]
+  var parentFrame = [currentPatchArtboard frame]
+
+  if (localScaleType == scaleType.bottom || localScaleType == scaleType.top) {
+    [frame setWidth: [[frame width] * scaleFactor]]
+    var localValue = ([frame x] - 1) * scaleFactor + 1
+    [frame setX:localValue]
+  }
+  else if (localScaleType == scaleType.left || localScaleType == scaleType.right) {
+    [frame setHeight: [[frame height] * scaleFactor]]
+    var localValue = ([frame y] - 1) * scaleFactor + 1
+    [frame setY:localValue]
+  }
+
+  if (localScaleType == scaleType.right) {
+    [frame setX:([parentFrame width] - 1)]
+  }
+  else if (localScaleType == scaleType.bottom) {
+    [frame setY:([parentFrame height] - 1)]
+  }
+  
+}
+
+// var applyHorizontalScale = function(layer, scaleFactor) {
+//   var frame = [layer frame]
+//   [frame setX: [[frame x] * scaleFactor]]
+//   [frame setWidth: [[frame width] * scaleFactor]]
+// }
+// 
+// var applyVerticalScale = function(layer, scaleFactor) {
+//   var frame = [layer frame]
+//   [frame setY: [[frame y] * scaleFactor]]
+//   [frame setHeight: [[frame height] * scaleFactor]]
+// }
+
+
+
+
+
+
+
+
+
+var addNineEnding = function(currentTitle) {
+  var last2 = currentTitle.slice(-2)
+  if (last2 == ".9") { return currentTitle }
+  return currentTitle + ".9"
+}
+
+
+var checkSlachBeginning = function(currentTitle) {
+  var slashedStringJSArray = currentTitle.split("/")
+  var composedString = ""
+  for (var j = 0; j < slashedStringJSArray.length; j++) {
+      var currentSlashPart = slashedStringJSArray[j]
+      if (currentSlashPart == "") { continue; }
+      composedString += "/" + currentSlashPart
+  }
+  return composedString
+}
+
+
+var returnWithReplaceMDPIArray = function(currentTitle, scaleNameArray) {
+  var patchArtboardNameArray = NSMutableArray.new()
+  
+  for (var j = 0; j < scaleNameArray.count(); j++) {
+        var newTitle = currentTitle
+        var currentScaleName = scaleNameArray.objectAtIndex(j)
+        var currentScaleString = newTitle.replace(mdpiString, currentScaleName)
+        patchArtboardNameArray.addObject(currentScaleString)
+  }
+  
+  return patchArtboardNameArray
+}
+
+
+
+var getPatchArtboardNameArray = function(currentTitle) {
+  var findMDPIResult = currentTitle.split(mdpiString)
+
+  if (findMDPIResult.length > 1) { var currentTitle = addNineEnding(currentTitle) }
+  else {
+    var composedString = "/" + scaleNameArray.firstObject() + checkSlachBeginning(currentTitle)
+    var currentTitle = addNineEnding(composedString)
+  }
+  
+  return returnWithReplaceMDPIArray(currentTitle, scaleNameArray)
+}
+
+
+var makeExportable = function(currentLayer) {
+
+  var exportSizes = [[currentLayer exportOptions] exportFormats]
+  [[currentLayer exportOptions] setExportFormats:[]];
+
+  var size = [[currentLayer exportOptions] addExportFormat]
+//   [size setScale:scaleData]
+//   [size setName:""]
+}
+

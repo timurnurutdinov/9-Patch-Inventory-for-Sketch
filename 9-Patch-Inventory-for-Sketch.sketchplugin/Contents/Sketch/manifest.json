@@ -1,0 +1,27 @@
+{
+  "name" : "9 Patch Inventory",
+  "author" : "Timur Nurutdinov",
+  "authorEmail" : "framerinventory@gmail.com",
+  "description": "Plugin to generate 9patch Artboards from Master Artboard",
+  "homepage": "https://github.com/timurnurutdinov/9-Patch-Inventory-for-Sketch",
+  "identifier": "com.addleimb.9-patch-inventory",
+  "version": "0.1.0",
+  "appcast": "https://raw.githubusercontent.com/timurnurutdinov/framerinventory/master/plugin-appcast.xml",
+  "compatibleVersion": 5.0,
+  "commands" : [
+    {
+      "script" : "script.cocoascript",
+      "name" : "run-plugin",
+      "handlers" : {
+        "run" : "onRun"
+      },
+      "identifier" : "generate-patch"
+    }
+  ],
+  "menu" : {
+    "title" : "run-plugin",
+    "items" : [
+      "generate-patch"
+    ]
+  }
+}

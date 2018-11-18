@@ -1,0 +1,132 @@
+function TypeInventory () {}
+
+
+TypeInventory.isArtboardType = function(type) { return (type == "MSArtboardGroup" || type == "MSSymbolMaster") ? true : false }
+TypeInventory.isPageType = function(type) { return (type == "MSPage") ? true : false }
+
+TypeInventory.isSliceType = function(type) { return (type == "MSSliceLayer") ? true : false }
+TypeInventory.isTextType = function(type) { return (type == "MSTextLayer") ? true : false }
+TypeInventory.isImageType = function(type) { return (type == "MSBitmapLayer") ? true : false }
+TypeInventory.isShapeGroupType = function(type) { return (type == "MSShapeGroup") ? true : false }
+
+TypeInventory.isLayerGroup = function(type) { return (type == "MSLayerGroup") ? true : false }
+TypeInventory.isSymbolGroup = function(type) { return (type == "MSSymbolInstance") ? true : false }
+TypeInventory.isGroupType = function(type) {
+	return (TypeInventory.isLayerGroup(type) || TypeInventory.isSymbolGroup(type)) ? true : false
+}
+
+
+
+// Types:
+
+// -1 — Default
+// 0 — MSLayerGroup
+// 1 — MSArtboardGroup
+// 2 — MSSymbolMaster
+// 3 — MSSymbolInstance
+// 4 — MSShapeGroup
+// 5 — MSBitmapLayer
+// 6 — MSTextLayer
+// 7 — MSSliceLayer
+// 8 — MSPage
+
+TypeInventory.returnTypeNumber = function(layer) {
+		var type = [layer className]
+
+		if (type == "MSLayerGroup") return 0
+		else if (type == "MSArtboardGroup") return 1
+		else if (type == "MSSymbolMaster") return 2
+		else if (type == "MSSymbolInstance") return 3
+		else if (type == "MSShapeGroup") return 4
+		else if (type == "MSBitmapLayer") return 5
+		else if (type == "MSTextLayer") return 6
+		else if (type == "MSSliceLayer") return 7
+		else if (type == "MSPage") return 8
+		else return -1
+}
+
+
+// Types:
+
+// -1 — None?
+// 0 — MSLayerGroup
+// 1 — MSArtboardGroup
+// 2 — MSPage
+
+TypeInventory.returnParentTypeNumber = function(layer) {
+		var type = [layer className]
+
+		if (type == "MSLayerGroup") return 0
+		else if (type == "MSArtboardGroup") return 1
+		else if (type == "MSPage") return 2
+		else return -1
+}
+
+
+
+// Number of sublayers of shape
+TypeInventory.returnInsideLayersNumber = function(layer) {
+		var layersNumber = layer.layers().count()
+		return layersNumber
+}
+
+
+// Shape types:
+
+// -1 — Non shape
+// 0 — Rectable
+// 1 — Oval
+// 2 — Complex
+// 3 — Others (MSStarShape, MSShapePathLayer)
+
+TypeInventory.getShapeTypeNumber = function(localLayer) {
+
+	var magicLayers = localLayer.layers()
+	if (magicLayers.count() > 1) { return 2 }
+
+
+	var shape = magicLayers.firstObject()
+	// log(shape.className())
+
+	if(shape && shape.isKindOfClass(MSOvalShape)) {
+		if ([[shape points] count] != 4) { return 2 }
+		return 1
+	}
+	else if(shape && shape.isKindOfClass(MSRectangleShape)) {
+		if ([[shape points] count] != 4) { return 2 }
+		return 0
+	}
+
+	return 3
+}
+
+
+
+
+
+
+
+TypeInventory.findParentArtboard = function(layer) {
+	if (layer == nil) { return nil }
+	var lookingForParentArtboard = true
+	var localParent = layer
+
+	while (lookingForParentArtboard) {
+		localParent = [localParent parentGroup]
+		if (TypeInventory.isArtboardType([localParent className])) { lookingForParentArtboard = false }
+		else if (TypeInventory.isPageType([localParent className])) { lookingForParentArtboard = false }
+	}
+	return localParent
+}
+
+
+TypeInventory.findParentPage = function(layer) {
+	var lookingForParentPage = true
+	var localParent = layer
+
+	while (lookingForParentPage) {
+		localParent = [localParent parentGroup]
+		if (TypeInventory.isPageType([localParent className])) { lookingForParentPage = false }
+	}
+	return localParent
+}
