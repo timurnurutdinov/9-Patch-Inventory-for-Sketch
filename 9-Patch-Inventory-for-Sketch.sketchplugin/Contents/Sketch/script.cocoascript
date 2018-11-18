@@ -43,12 +43,12 @@ var onRun = function(context) {
 	var patchMaster = selectedLayers.firstObject()
 	if (patchMaster == null) {
 	  [currentDocument showMessage:"Select Artboard or Master Symbol"]
-	  log("Select Artboard or Master Symbol")
+	  // log("Select Artboard or Master Symbol")
 	  return
 	}
 	if (!(patchMaster.className() == "MSArtboardGroup" || patchMaster.className() == "MSSymbolMaster")) {
 	  [currentDocument showMessage:"Select Artboard or Master Symbol"]
-	  log("Select Artboard or Master Symbol")
+	  // log("Select Artboard or Master Symbol")
 	  return
 	}
 	
@@ -63,26 +63,8 @@ var onRun = function(context) {
 	var patchArtboards = createPatchArtboards(patchMaster, positionArray, pmPatchLayers)
 
 	createPatchLayers(pmPatchLayers, patchArtboards)
-
-
-
-  	// var learnFileDoneMessage = "Done " + leaningVectorFileLines + " lines"
   	[currentDocument showMessage:"👍🏻"]
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -152,7 +134,6 @@ var getPlace = function(layer) {
 	var parentValues = getAbsolutePlaceArtboard(TypeInventory.findParentArtboard(layer))    
 
 	var layerValues = getAbsolutePlaceRect(layer)
-	//var resultValues = [layerValues[0], layerValues[1], layerValues[2] - parentValues[2], layerValues[3] - parentValues[3]]
     
     var resultValues = {
       width: layerValues[0], 
@@ -239,7 +220,6 @@ var removePatchPadding = function(patchArtboard) {
 }
 
 
-// removePatchPadding(patchMaster)
 
 var addPatchPadding = function(patchArtboard) {
   var topChildren = patchArtboard.layers()
@@ -257,8 +237,6 @@ var addPatchPadding = function(patchArtboard) {
   [frame setHeight: [[frame height] + 2]]
 }
 
-// addPatchPadding(patchMaster)
-
 
 var removePatchLayers = function(pmPatchLayers) {
   var patchLayers = pmPatchLayers.layers
@@ -270,15 +248,11 @@ var removePatchLayers = function(pmPatchLayers) {
 }
 
 
-// removePatchLayers(patchMaster)
-
-
 
 
 
 var generatePatchPositionArray = function(scaleFactorArray, pmPosition) {
   var patchPositionArray = NSMutableArray.new()
-//   log(pmPosition.y)
 
   for (var i = 0; i < scaleFactorArray.count(); i++) {
     if (i == 0) { patchPositionArray.push(pmPosition) }
@@ -299,9 +273,6 @@ var generatePatchPositionArray = function(scaleFactorArray, pmPosition) {
     }
   }
   
-
-//   log(currentPatchSize.y)
-  
   return patchPositionArray
 
 }
@@ -311,7 +282,6 @@ var generatePatchPositionArray = function(scaleFactorArray, pmPosition) {
 var createPatchArtboards = function(patchMaster, positionArray, pmPatchLayers) {
   var patchArtboards = NSMutableArray.new()
   var currentTitleArtboardNames = getPatchArtboardNameArray(patchMaster.name())
-  log(currentTitleArtboardNames)
 
   for (var i = 0; i < positionArray.count(); i++) {
     if (i == 0) {
@@ -334,11 +304,8 @@ var createPatchArtboards = function(patchMaster, positionArray, pmPatchLayers) {
     var frame = [nextPatch frame]
     [frame setX: currentPosition.x]
     [frame setY: currentPosition.y]
-
-//     log([frame y])
-//     log("---")
-    
-//     log("| " + currentTitleArtboardNames.objectAtIndex(i))
+	
+	
     nextPatch.setName(currentTitleArtboardNames.objectAtIndex(i))
     makeExportable(patchMaster)
     patchArtboards.addObject(nextPatch)
@@ -351,10 +318,6 @@ var createPatchArtboards = function(patchMaster, positionArray, pmPatchLayers) {
 
 
 var createPatchLayers = function(pmPatchLayers, patchArtboards) {
-  log("PMLayers")
-  log(pmPatchLayers)
-  log("———")
-
 
   for (var i = 0; i < patchArtboards.count(); i++) {
       var scaleFactor = scaleFactorArray.objectAtIndex(i)
@@ -363,7 +326,7 @@ var createPatchLayers = function(pmPatchLayers, patchArtboards) {
 
       var currentArtboardTopChildren = currentPatchArtboard.layers()
       var restoreLayerArray = NSMutableArray.new()
-      log(currentArtboardTopChildren)
+	  
       for (var c = 0; c < currentArtboardTopChildren.count(); c++) {
           var currentTopChild = currentArtboardTopChildren.objectAtIndex(c)
           [currentTopChild removeFromParent]
@@ -389,7 +352,7 @@ var createPatchLayers = function(pmPatchLayers, patchArtboards) {
           applyScale(scaleType.right, pmPatchLayers.right.objectAtIndex(j), currentPatchArtboard, scaleFactorArray.objectAtIndex(i))
       }
 
-//       log(restoreLayerArray)
+	  
       for (var c = 0; c < restoreLayerArray.count(); c++) {
           var currentTopChild = restoreLayerArray.objectAtIndex(c)
           [currentPatchArtboard addLayers:[currentTopChild]]
